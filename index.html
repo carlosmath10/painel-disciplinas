@@ -388,6 +388,7 @@ function profHome() {
       <div class="flex gap-2">
         <span class="badge" style="background:var(--accent-light);color:var(--accent)">Máx ${d.maxPorGrupo}/grupo</span>
         <span class="badge" style="background:var(--success-light);color:var(--success)">${nA} ativ.</span>
+        ${d.discPin ? '<span class="badge" style="background:var(--student-light);color:var(--student)">🔒 PIN: '+esc(d.discPin)+'</span>' : '<span class="badge" style="background:var(--warn-light);color:var(--warn)">Sem PIN</span>'}
       </div>
     </div>`;
   }).join('');
@@ -407,21 +408,55 @@ function alunoHome() {
   const ds = STATE.disciplinas || [];
   let cards = ds.map(d => {
     const comG = d.grupos ? Object.keys(d.grupos).length : 0;
-    return `<div class="card card-hover" onclick="goDisc('${d.id}')" style="border-color:rgba(124,58,237,.1)">
-      <h3 style="font-size:17px;font-weight:700;letter-spacing:-.02em;margin-bottom:16px">${esc(d.nome)}</h3>
-      <div class="flex gap-5">
-        <div class="stat"><div class="stat-value" style="color:var(--student)">${(d.alunos||[]).length}</div><div class="stat-label">Alunos</div></div>
-        <div class="stat"><div class="stat-value" style="color:var(--success)">${d.numGrupos}</div><div class="stat-label">Grupos</div></div>
-        <div class="stat"><div class="stat-value" style="color:var(--warn)">${(d.numGrupos*d.maxPorGrupo)-comG}</div><div class="stat-label">Vagas</div></div>
-      </div>
-    </div>`;
+    const hasPin = d.discPin && d.discPin.length > 0;
+    const unlocked = !hasPin || (window._unlockedDiscs && window._unlockedDiscs[d.id]);
+    if (unlocked) {
+      return `<div class="card card-hover" onclick="goDisc('${d.id}')" style="border-color:rgba(124,58,237,.1)">
+        <div class="flex justify-between items-center mb-4">
+          <h3 style="font-size:17px;font-weight:700;letter-spacing:-.02em">${esc(d.nome)}</h3>
+          ${hasPin ? '<span class="badge" style="background:var(--success-light);color:var(--success)">🔓 Desbloqueada</span>' : ''}
+        </div>
+        <div class="flex gap-5">
+          <div class="stat"><div class="stat-value" style="color:var(--student)">${(d.alunos||[]).length}</div><div class="stat-label">Alunos</div></div>
+          <div class="stat"><div class="stat-value" style="color:var(--success)">${d.numGrupos}</div><div class="stat-label">Grupos</div></div>
+          <div class="stat"><div class="stat-value" style="color:var(--warn)">${(d.numGrupos*d.maxPorGrupo)-comG}</div><div class="stat-label">Vagas</div></div>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="card" style="border-color:rgba(124,58,237,.1)">
+        <div class="flex justify-between items-center mb-4">
+          <h3 style="font-size:17px;font-weight:700;letter-spacing:-.02em">${esc(d.nome)}</h3>
+          <span class="badge" style="background:var(--student-light);color:var(--student)">🔒 PIN necessário</span>
+        </div>
+        <div class="flex gap-2 items-end">
+          <div style="flex:1"><label class="label">Digite o PIN da disciplina</label><input id="dpin-${d.id}" type="password" class="input mono" placeholder="PIN" style="text-align:center;letter-spacing:6px" onkeydown="if(event.key==='Enter')tryDiscPin('${d.id}')"></div>
+          <button class="btn btn-student" onclick="tryDiscPin('${d.id}')" style="height:42px">Entrar</button>
+        </div>
+        <p id="dpin-err-${d.id}" class="hidden" style="color:var(--danger);font-size:13px;margin-top:8px">PIN incorreto</p>
+      </div>`;
+    }
   }).join('');
   return `<div class="animate">
     <h1 style="font-size:24px;font-weight:700;letter-spacing:-.03em;margin-bottom:4px">Área do Aluno</h1>
-    <p style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Escolha a disciplina</p>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Escolha a disciplina e digite o PIN fornecido pelo professor</p>
     ${ds.length===0?'<div class="card text-center" style="padding:64px"><p style="font-size:38px;margin-bottom:12px">📭</p><p style="color:var(--text-muted)">Nenhuma disciplina disponível</p></div>':''}
     <div class="grid grid-cards">${cards}</div>
   </div>`;
+}
+
+if (!window._unlockedDiscs) window._unlockedDiscs = {};
+function tryDiscPin(did) {
+  const d = disc(did);
+  const input = document.getElementById('dpin-' + did);
+  const err = document.getElementById('dpin-err-' + did);
+  if (!input) return;
+  if (input.value === d.discPin) {
+    window._unlockedDiscs[did] = true;
+    err.classList.add('hidden');
+    goDisc(did);
+  } else {
+    err.classList.remove('hidden');
+  }
 }
 
 /* ═══ PROF DISC ═══ */
@@ -614,10 +649,11 @@ function configTab(d) {
   return `
     <div class="card mb-5">
       <div style="font-size:15px;font-weight:600;margin-bottom:18px">Dados da Disciplina</div>
-      <div class="grid" style="grid-template-columns:2fr 1fr 1fr;gap:14px;align-items:end">
+      <div class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr;gap:14px;align-items:end">
         <div><label class="label">Nome</label><input id="c-n" class="input" value="${esc(d.nome)}"></div>
         <div><label class="label">Nº de Grupos</label><input id="c-ng" type="number" class="input" value="${d.numGrupos}"></div>
         <div><label class="label">Máx por Grupo</label><input id="c-m" type="number" class="input" value="${d.maxPorGrupo}"></div>
+        <div><label class="label">PIN do Aluno</label><input id="c-dp" class="input mono" value="${d.discPin||''}" placeholder="Ex: 1010" style="text-align:center;letter-spacing:4px"></div>
       </div>
       <div class="flex gap-3 mt-4">
         <button class="btn btn-primary btn-sm" onclick="saveCfg('${d.id}')">Salvar</button>
@@ -647,9 +683,10 @@ function addDiscModal() {
     <h3>Nova Disciplina</h3>
     <div class="flex flex-col gap-4">
       <div><label class="label">Nome</label><input id="m-n" class="input" placeholder="Ex: Cálculo I"></div>
-      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+      <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
         <div><label class="label">Nº de Grupos</label><input id="m-ng" type="number" class="input" value="6"></div>
         <div><label class="label">Máx por Grupo</label><input id="m-mx" type="number" class="input" value="5"></div>
+        <div><label class="label">PIN da Disciplina</label><input id="m-dp" class="input mono" placeholder="Ex: 1010" style="text-align:center;letter-spacing:4px"></div>
       </div>
       <div><label class="label">Alunos (um por linha)</label><textarea id="m-al" rows="8" placeholder="João da Silva&#10;Maria Santos"></textarea></div>
       <div class="flex justify-between mt-2"><button class="btn btn-secondary" onclick="closeM()">Cancelar</button><button class="btn btn-primary" onclick="mkDisc()">Criar Disciplina</button></div>
@@ -659,8 +696,9 @@ function addDiscModal() {
 function mkDisc() {
   const n=document.getElementById('m-n').value.trim(); if(!n)return;
   const al=document.getElementById('m-al').value.split('\n').map(l=>l.trim()).filter(Boolean).map(x=>({id:gid(),nome:x}));
+  const dp=document.getElementById('m-dp').value.trim()||'';
   if(!STATE.disciplinas)STATE.disciplinas=[];
-  STATE.disciplinas.push({id:gid(),nome:n,maxPorGrupo:parseInt(document.getElementById('m-mx').value)||5,numGrupos:parseInt(document.getElementById('m-ng').value)||6,alunos:al,grupos:{},atividades:[]});
+  STATE.disciplinas.push({id:gid(),nome:n,maxPorGrupo:parseInt(document.getElementById('m-mx').value)||5,numGrupos:parseInt(document.getElementById('m-ng').value)||6,alunos:al,grupos:{},atividades:[],discPin:dp});
   save();closeM();toast('"'+n+'" criada!');
 }
 function delDisc(id){if(!confirm('Excluir esta disciplina e todos os dados?'))return;STATE.disciplinas=STATE.disciplinas.filter(d=>d.id!==id);save();toast('Excluída','danger');}
@@ -738,7 +776,7 @@ function toggleEdit(did,aid){window._eid=window._eid===aid?null:aid;render();}
 function spg(did,aid,g,v){const d=disc(did),a=d.atividades.find(x=>x.id===aid);if(!a.pontuacoes)a.pontuacoes={};a.pontuacoes[g]=parseFloat(v)||0;save();}
 function spi(did,aid,uid,v){const d=disc(did),a=d.atividades.find(x=>x.id===aid);if(!a.individuais)a.individuais={};a.individuais[uid]=parseFloat(v)||0;save();}
 
-function saveCfg(did){const d=disc(did);d.nome=document.getElementById('c-n').value.trim()||d.nome;d.numGrupos=parseInt(document.getElementById('c-ng').value)||d.numGrupos;d.maxPorGrupo=parseInt(document.getElementById('c-m').value)||d.maxPorGrupo;save();toast('Salvo!');}
+function saveCfg(did){const d=disc(did);d.nome=document.getElementById('c-n').value.trim()||d.nome;d.numGrupos=parseInt(document.getElementById('c-ng').value)||d.numGrupos;d.maxPorGrupo=parseInt(document.getElementById('c-m').value)||d.maxPorGrupo;d.discPin=document.getElementById('c-dp').value.trim();save();toast('Salvo!');}
 function addA(did){const i=document.getElementById('na'),n=i.value.trim();if(!n)return;const d=disc(did);if(!d.alunos)d.alunos=[];d.alunos.push({id:gid(),nome:n});i.value='';save();toast('Adicionado!');}
 function bulkAdd(did){const t=document.getElementById('bk-t').value,ns=t.split('\n').map(l=>l.trim()).filter(Boolean).map(n=>({id:gid(),nome:n}));if(!ns.length)return;const d=disc(did);if(!d.alunos)d.alunos=[];d.alunos.push(...ns);document.getElementById('bk-t').value='';save();toast(ns.length+' adicionados!');}
 function rmAluno(did,aid){const d=disc(did);d.alunos=d.alunos.filter(a=>a.id!==aid);if(d.grupos)delete d.grupos[aid];save();toast('Removido','warn');}
