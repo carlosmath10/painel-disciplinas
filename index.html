@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Disciplinas · UFDPar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117; --card: #181b24; --card-hover: #1e2230;
+  --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.15);
+  --success: #22c55e; --warn: #f59e0b; --danger: #ef4444;
+  --text: #e2e8f0; --text-dim: #94a3b8; --text-muted: #64748b;
+  --border: #2a2f3e; --input-bg: #151820;
+  --student: #8b5cf6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+.animate-in { animation: fadeUp .4s ease; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ─── BUTTONS ─── */
+.btn {
+  border: none; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+  transition: all .2s; font-size: 14px; padding: 10px 18px;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text); font-size: 13px; padding: 8px 14px; }
+.btn-danger { background: rgba(239,68,68,.15); color: var(--danger); font-size: 13px; padding: 8px 14px; }
+.btn-ghost { background: transparent; color: var(--text-dim); font-size: 13px; padding: 6px 10px; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-student { background: var(--student); color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+
+/* ─── INPUTS ─── */
+.input, .select, textarea {
+  background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none; width: 100%; transition: border-color .2s;
+}
+.input:focus, .select:focus, textarea:focus { border-color: var(--accent); }
+.select {
+  appearance: none; cursor: pointer; padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+textarea { resize: vertical; }
+
+/* ─── CARD ─── */
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 24px; transition: all .25s;
+}
+.card-click { cursor: pointer; }
+.card-click:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-2px); }
+
+/* ─── BADGE ─── */
+.badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  font-family: 'JetBrains Mono', monospace; display: inline-block;
+}
+
+/* ─── LAYOUT ─── */
+.container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+.grid { display: grid; gap: 16px; }
+.grid-cards { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.grid-groups { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+.grid-scores { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.grid-indiv { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.flex { display: flex; } .flex-col { flex-direction: column; } .flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; } .justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; } .gap-5 { gap: 20px; }
+.mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; } .mb-5 { margin-bottom: 20px; } .mb-6 { margin-bottom: 24px; }
+.mt-3 { margin-top: 12px; } .mt-4 { margin-top: 16px; }
+.text-center { text-align: center; } .text-right { text-align: right; }
+.w-full { width: 100%; }
+
+/* ─── HEADER ─── */
+.header {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 100;
+}
+
+/* ─── TABS ─── */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+.tab {
+  background: transparent; border: none; color: var(--text-muted); padding: 10px 16px;
+  font-size: 14px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; align-items: center; gap: 6px;
+}
+.tab-active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-active-student { color: var(--student); border-bottom-color: var(--student); }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  width: 100%; max-width: 500px; max-height: 85vh; overflow: auto; padding: 28px;
+}
+
+/* ─── PROGRESS BAR ─── */
+.progress { background: var(--border); border-radius: 4px; height: 4px; }
+.progress-bar { height: 4px; border-radius: 4px; transition: width .4s ease; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; top: 20px; right: 20px; z-index: 9999; color: #fff;
+  padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0,0,0,.3); animation: slideIn .3s ease;
+}
+
+/* ─── STAT ─── */
+.stat-value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ─── RANKING ROW ─── */
+.rank-row {
+  display: grid; grid-template-columns: 40px 2fr 70px 70px 1fr;
+  gap: 8px; padding: 10px 14px; align-items: center; border-radius: 8px; font-size: 14px;
+}
+.rank-header { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 600px) {
+  .grid-cards { grid-template-columns: 1fr; }
+  .grid-groups { grid-template-columns: 1fr; }
+  .grid-assign { grid-template-columns: 1fr !important; }
+  .rank-row { grid-template-columns: 30px 1fr 50px 50px; }
+  .rank-row > *:last-child { display: none; }
+  .header { padding: 12px 16px; gap: 8px; }
+  .container { padding: 20px 14px; }
+  .stat-value { font-size: 22px; }
+}
+
+.hidden { display: none !important; }
+.label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; display: block; }
+.section-label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen" class="animate-in" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:520px">
+    <div class="text-center mb-6">
+      <svg width="40" height="40" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" style="margin-bottom:12px"><path d="M2 3h14a7 7 0 017 7v19a5 5 0 00-5-5H2zM38 3H24a7 7 0 00-7 7v19a5 5 0 015-5h16z"/></svg>
+      <h1 style="font-size:28px;font-weight:700">Painel de Disciplinas</h1>
+      <p style="color:var(--text-muted);margin-top:8px">UFDPar · Selecione como deseja acessar</p>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+      <!-- Professor -->
+      <div class="card text-center" style="padding:28px">
+        <div style="width:56px;height:56px;border-radius:16px;background:rgba(59,130,246,.13);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--accent)">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+        </div>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Professor</h3>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Acesso completo</p>
+        <input id="pin-input" type="password" class="input mono" placeholder="PIN" style="text-align:center;font-size:18px;letter-spacing:8px;margin-bottom:12px">
+        <p id="pin-error" class="hidden" style="color:var(--danger);font-size:13px;margin-bottom:8px">PIN incorreto</p>
+        <button class="btn btn-primary w-full" style="justify-content:center" onclick="tryLogin()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg> Entrar
+        </button>
+      </div>
+      <!-- Aluno -->
+      <div class="card card-click text-center" style="padding:28px;border-color:rgba(139,92,246,.27)" onclick="enterAsStudent()">
+        <div style="width:56px;height:56px;border-radius:16px;background:rgba(139,92,246,.13);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--student)">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2L1 7.5l11 5.5 11-5.5L12 2zM1 7.5v8l11 5.5M23 7.5v8l-11 5.5"/></svg>
+        </div>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Aluno</h3>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Escolher grupo e pontuação</p>
+        <div style="height:86px"></div>
+        <button class="btn btn-student w-full" style="justify-content:center">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 1L1 4.5l7 3.5 7-3.5L8 1zM1 4.5v5l7 3.5M15 4.5v5l-7 3.5"/></svg> Entrar
+        </button>
+      </div>
+    </div>
+    <p class="text-center" style="color:var(--text-muted);font-size:12px;margin-top:24px">PIN padrão: <span class="mono" style="color:var(--text-dim)">1234</span> (alterável nas configurações)</p>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="app" class="hidden">
+  <header class="header">
+    <button id="btn-back" class="btn btn-ghost hidden" onclick="goHome()">← Voltar</button>
+    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v11a3 3 0 00-3-3H2zM20 3h-6a4 4 0 00-4 4v11a3 3 0 013-3h7z"/></svg>
+    <span style="font-size:17px;font-weight:700">Painel de Disciplinas</span>
+    <span id="role-badge" class="badge"></span>
+    <div style="flex:1"></div>
+    <button id="btn-refresh" class="btn btn-ghost hidden" onclick="refreshData()">↻ Atualizar</button>
+    <button class="btn btn-ghost" onclick="logout()">Sair</button>
+  </header>
+  <div class="container">
+    <div id="page-content"></div>
+  </div>
+</div>
+
+<!-- ═══ FIREBASE ═══ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDOAd6kBjbVDCLb7fN8uflDcLXxYLaWghg",
+  authDomain: "painel-de-disciplinas.firebaseapp.com",
+  databaseURL: "https://painel-de-disciplinas-default-rtdb.firebaseio.com",
+  projectId: "painel-de-disciplinas",
+  storageBucket: "painel-de-disciplinas.firebasestorage.app",
+  messagingSenderId: "737582040457",
+  appId: "1:737582040457:web:7b831b71836a07a0408d58"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const dataRef = db.ref('painel');
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let STATE = { disciplinas: [], profPin: "1234" };
+let ROLE = null; // "prof" | "aluno"
+let CURRENT_VIEW = { page: "home" }; // { page, discId, tab }
+let LISTENER_ATTACHED = false;
+
+// ═══════════════════════════════════════════════════
+// FIREBASE SYNC
+// ═══════════════════════════════════════════════════
+function saveState() {
+  dataRef.set(STATE);
+}
+
+function attachListener() {
+  if (LISTENER_ATTACHED) return;
+  LISTENER_ATTACHED = true;
+  dataRef.on('value', snap => {
+    const val = snap.val();
+    if (val) {
+      STATE = val;
+      if (!STATE.disciplinas) STATE.disciplinas = [];
+      render();
+    }
+  });
+}
+
+// Initial load
+dataRef.once('value').then(snap => {
+  const val = snap.val();
+  if (val) {
+    STATE = val;
+    if (!STATE.disciplinas) STATE.disciplinas = [];
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+const genId = () => Math.random().toString(36).slice(2, 10);
+
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type === 'success' ? 'var(--success)' : type === 'danger' ? 'var(--danger)' : 'var(--warn)';
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 2500);
+}
+
+function getDisc(id) { return (STATE.disciplinas || []).find(d => d.id === id); }
+
+function getVagas(disc) {
+  const v = {};
+  for (let i = 1; i <= disc.numGrupos; i++) v[i] = disc.maxPorGrupo;
+  if (disc.grupos) Object.values(disc.grupos).forEach(g => { if (v[g] !== undefined) v[g]--; });
+  return v;
+}
+
+function getSemGrupo(disc) {
+  return (disc.alunos || []).filter(a => !disc.grupos || !disc.grupos[a.id]);
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ═══════════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════
+document.getElementById('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+function tryLogin() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === STATE.profPin) {
+    ROLE = 'prof';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-error').classList.add('hidden');
+    enterApp();
+  } else {
+    document.getElementById('pin-error').classList.remove('hidden');
+  }
+}
+
+function enterAsStudent() {
+  ROLE = 'aluno';
+  enterApp();
+}
+
+function enterApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const badge = document.getElementById('role-badge');
+  badge.textContent = ROLE === 'prof' ? 'Professor' : 'Aluno';
+  badge.style.background = ROLE === 'prof' ? 'rgba(59,130,246,.15)' : 'rgba(139,92,246,.15)';
+  badge.style.color = ROLE === 'prof' ? 'var(--accent)' : 'var(--student)';
+  document.getElementById('btn-refresh').classList.toggle('hidden', ROLE !== 'aluno');
+  attachListener();
+  CURRENT_VIEW = { page: 'home' };
+  render();
+}
+
+function logout() {
+  ROLE = null;
+  CURRENT_VIEW = { page: 'home' };
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function refreshData() {
+  dataRef.once('value').then(snap => {
+    const val = snap.val();
+    if (val) { STATE = val; if (!STATE.disciplinas) STATE.disciplinas = []; render(); }
+    showToast('Dados atualizados!');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function goHome() { CURRENT_VIEW = { page: 'home' }; render(); }
+function goToDisc(id, tab) { CURRENT_VIEW = { page: 'disc', discId: id, tab: tab || (ROLE === 'prof' ? 'grupos' : 'grupo') }; render(); }
+function setTab(tab) { CURRENT_VIEW.tab = tab; render(); }
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+function render() {
+  const content = document.getElementById('page-content');
+  const backBtn = document.getElementById('btn-back');
+  backBtn.classList.toggle('hidden', CURRENT_VIEW.page === 'home');
+
+  if (CURRENT_VIEW.page === 'home') {
+    content.innerHTML = ROLE === 'prof' ? renderProfHome() : renderAlunoHome();
+  } else if (CURRENT_VIEW.page === 'disc') {
+    const disc = getDisc(CURRENT_VIEW.discId);
+    if (!disc) { goHome(); return; }
+    content.innerHTML = ROLE === 'prof' ? renderProfDisc(disc) : renderAlunoDisc(disc);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// PROFESSOR HOME
+// ═══════════════════════════════════════════════════
+function renderProfHome() {
+  const discs = STATE.disciplinas || [];
+  let cards = '';
+  discs.forEach(d => {
+    const sem = getSemGrupo(d).length;
+    const nAtiv = (d.atividades || []).length;
+    cards += `
+      <div class="card card-click" onclick="goToDisc('${d.id}')" style="position:relative">
+        <div style="position:absolute;top:12px;right:12px" onclick="event.stopPropagation();deleteDisc('${d.id}')">
+          <button class="btn btn-ghost" style="color:var(--text-muted);padding:4px">🗑</button>
+        </div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:14px">${escHtml(d.nome)}</h3>
+        <div class="flex gap-5">
+          <div class="text-center"><div class="stat-value" style="color:var(--accent)">${(d.alunos||[]).length}</div><div class="stat-label">Alunos</div></div>
+          <div class="text-center"><div class="stat-value" style="color:var(--success)">${d.numGrupos}</div><div class="stat-label">Grupos</div></div>
+          <div class="text-center"><div class="stat-value" style="color:${sem > 0 ? 'var(--warn)' : 'var(--success)'}">${sem}</div><div class="stat-label">Sem grupo</div></div>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <span class="badge" style="background:rgba(59,130,246,.13);color:var(--accent)">Máx ${d.maxPorGrupo}/grupo</span>
+          <span class="badge" style="background:rgba(34,197,94,.13);color:var(--success)">${nAtiv} ativ.</span>
+        </div>
+      </div>`;
+  });
+
+  return `<div class="animate-in">
+    <div class="flex justify-between items-center mb-6" style="flex-wrap:wrap;gap:12px">
+      <div><h1 style="font-size:28px;font-weight:700">Minhas Disciplinas</h1><p style="margin-top:6px;color:var(--text-muted);font-size:14px">${discs.length} disciplina${discs.length !== 1 ? 's' : ''}</p></div>
+      <div class="flex gap-2">
+        <button class="btn btn-secondary" onclick="showPinModal()">🔒 PIN</button>
+        <button class="btn btn-primary" onclick="showAddDiscModal()">+ Nova Disciplina</button>
+      </div>
+    </div>
+    ${discs.length === 0 ? '<div class="card text-center" style="padding:60px"><div style="font-size:48px;margin-bottom:12px">📚</div><h3 style="color:var(--text-dim)">Nenhuma disciplina</h3></div>' : ''}
+    <div class="grid grid-cards">${cards}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// ALUNO HOME
+// ═══════════════════════════════════════════════════
+function renderAlunoHome() {
+  const discs = STATE.disciplinas || [];
+  let cards = '';
+  discs.forEach(d => {
+    const comG = d.grupos ? Object.keys(d.grupos).length : 0;
+    const vagasTotal = (d.numGrupos * d.maxPorGrupo) - comG;
+    cards += `
+      <div class="card card-click" onclick="goToDisc('${d.id}')" style="border-color:rgba(139,92,246,.2)">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:14px">${escHtml(d.nome)}</h3>
+        <div class="flex gap-5">
+          <div class="text-center"><div class="stat-value" style="color:var(--student)">${(d.alunos||[]).length}</div><div class="stat-label">Alunos</div></div>
+          <div class="text-center"><div class="stat-value" style="color:var(--success)">${d.numGrupos}</div><div class="stat-label">Grupos</div></div>
+          <div class="text-center"><div class="stat-value" style="color:var(--warn)">${vagasTotal}</div><div class="stat-label">Vagas</div></div>
+        </div>
+      </div>`;
+  });
+
+  return `<div class="animate-in">
+    <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">Área do Aluno</h1>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Escolha a disciplina para selecionar grupo e registrar pontuações</p>
+    ${discs.length === 0 ? '<div class="card text-center" style="padding:60px"><div style="font-size:48px;margin-bottom:12px">📭</div><h3 style="color:var(--text-dim)">Nenhuma disciplina disponível</h3></div>' : ''}
+    <div class="grid grid-cards">${cards}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// PROFESSOR DISC PAGE
+// ═══════════════════════════════════════════════════
+function renderProfDisc(disc) {
+  const tab = CURRENT_VIEW.tab || 'grupos';
+  const tabs = [
+    { key: 'grupos', label: '👥 Grupos' },
+    { key: 'atividades', label: '📊 Atividades' },
+    { key: 'ranking', label: '🏆 Ranking' },
+    { key: 'config', label: '⚙ Config' }
+  ];
+  let tabsHtml = tabs.map(t => `<button class="tab ${tab === t.key ? 'tab-active' : ''}" onclick="setTab('${t.key}')">${t.label}</button>`).join('');
+  let body = '';
+  if (tab === 'grupos') body = renderGruposTab(disc, true);
+  else if (tab === 'atividades') body = renderAtividadesTab(disc, true);
+  else if (tab === 'ranking') body = renderRankingTab(disc);
+  else if (tab === 'config') body = renderConfigTab(disc);
+
+  return `<div class="animate-in">
+    <h1 style="font-size:26px;font-weight:700;margin-bottom:4px">${escHtml(disc.nome)}</h1>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px">${(disc.alunos||[]).length} alunos · ${disc.numGrupos} grupos · máx ${disc.maxPorGrupo}/grupo</p>
+    <div class="tabs">${tabsHtml}</div>
+    ${body}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// ALUNO DISC PAGE
+// ═══════════════════════════════════════════════════
+function renderAlunoDisc(disc) {
+  const tab = CURRENT_VIEW.tab || 'grupo';
+  const tabs = [
+    { key: 'grupo', label: '👥 Escolher Grupo' },
+    { key: 'pontuacao', label: '📊 Pontuação' },
+    { key: 'ranking', label: '🏆 Ranking' }
+  ];
+  let tabsHtml = tabs.map(t => `<button class="tab ${tab === t.key ? 'tab-active-student' : ''}" onclick="setTab('${t.key}')">${t.label}</button>`).join('');
+  let body = '';
+  if (tab === 'grupo') body = renderGruposTab(disc, false);
+  else if (tab === 'pontuacao') body = renderAtividadesTab(disc, false);
+  else if (tab === 'ranking') body = renderRankingTab(disc);
+
+  return `<div class="animate-in">
+    <h1 style="font-size:26px;font-weight:700;margin-bottom:4px">${escHtml(disc.nome)}</h1>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px">${(disc.alunos||[]).length} alunos · ${disc.numGrupos} grupos · máx ${disc.maxPorGrupo}/grupo</p>
+    <div class="tabs">${tabsHtml}</div>
+    ${body}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// GRUPOS TAB
+// ═══════════════════════════════════════════════════
+function renderGruposTab(disc, isProf) {
+  const vagas = getVagas(disc);
+  const semG = getSemGrupo(disc);
+  const accent = isProf ? 'var(--accent)' : 'var(--student)';
+
+  // Options for alunos sem grupo
+  let alunoOpts = '<option value="">Selecione...</option>';
+  semG.forEach(a => { alunoOpts += `<option value="${a.id}">${escHtml(a.nome)}</option>`; });
+
+  let grupoOpts = '<option value="">Grupo...</option>';
+  for (let g = 1; g <= disc.numGrupos; g++) {
+    grupoOpts += `<option value="${g}" ${vagas[g] <= 0 ? 'disabled' : ''}>Grupo ${g} (${vagas[g]} vaga${vagas[g] !== 1 ? 's' : ''})</option>`;
+  }
+
+  // Assignment form
+  let form = `
+    <div class="card mb-6" style="background:linear-gradient(135deg,var(--card),${isProf ? 'var(--card-hover)' : '#1a1530'});border-color:${isProf ? 'var(--border)' : 'rgba(139,92,246,.2)'}">
+      <h3 style="font-size:17px;font-weight:700;color:${accent};margin-bottom:6px">${isProf ? 'Atribuir Aluno' : 'Escolha seu Grupo'}</h3>
+      ${!isProf ? '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">Selecione seu nome e o grupo desejado</p>' : '<div style="height:12px"></div>'}
+      <div class="grid grid-assign" style="grid-template-columns:2fr 1fr auto;gap:12px;align-items:end">
+        <div><label class="label">${isProf ? 'Aluno' : 'Seu Nome'}</label><select id="sel-aluno" class="select">${alunoOpts}</select></div>
+        <div><label class="label">Grupo</label><select id="sel-grupo" class="select">${grupoOpts}</select></div>
+        <button class="btn ${isProf ? 'btn-primary' : 'btn-student'}" onclick="atribuirGrupo('${disc.id}')" style="margin-bottom:1px">✓ ${isProf ? 'Atribuir' : 'Entrar'}</button>
+      </div>
+    </div>`;
+
+  // Sem grupo warning
+  let warn = '';
+  if (semG.length > 0) {
+    let names = semG.map(a => `<span style="background:rgba(245,158,11,.13);color:var(--warn);padding:4px 10px;border-radius:6px;font-size:13px">${escHtml(a.nome)}</span>`).join('');
+    warn = `<div class="card mb-5" style="border-color:rgba(245,158,11,.27);background:rgba(245,158,11,.04)">
+      <div class="flex items-center gap-2 mb-3"><span>⚠️</span><strong style="color:var(--warn)">${semG.length} sem grupo</strong></div>
+      <div class="flex flex-wrap gap-2">${names}</div>
+    </div>`;
+  }
+
+  // Groups grid
+  let groups = '';
+  for (let g = 1; g <= disc.numGrupos; g++) {
+    const membros = (disc.alunos || []).filter(a => disc.grupos && disc.grupos[a.id] === g);
+    const full = vagas[g] === 0;
+    let membersList = '';
+    if (membros.length === 0) {
+      membersList = '<p style="color:var(--text-muted);font-size:13px;font-style:italic">Vazio</p>';
+    } else {
+      membros.forEach(a => {
+        if (isProf) {
+          membersList += `<div class="flex justify-between items-center" style="background:var(--input-bg);border-radius:8px;padding:8px 12px;margin-bottom:4px">
+            <span style="font-size:14px">${escHtml(a.nome)}</span>
+            <button class="btn btn-ghost" style="padding:2px;color:var(--text-muted)" onclick="removerDoGrupo('${disc.id}','${a.id}')">🗑</button>
+          </div>`;
+        } else {
+          membersList += `<span style="display:block;font-size:13px;color:var(--text-dim);padding:3px 0">• ${escHtml(a.nome)}</span>`;
+        }
+      });
+    }
+    groups += `
+      <div class="card" style="border-color:${full ? 'rgba(34,197,94,.27)' : 'var(--border)'}">
+        <div class="flex justify-between items-center mb-3">
+          <h4 style="font-weight:700">Grupo ${g}</h4>
+          <span class="badge" style="background:${full ? 'rgba(34,197,94,.13)' : 'rgba(100,116,139,.13)'};color:${full ? 'var(--success)' : 'var(--text-muted)'}">${full ? 'Completo' : vagas[g] + ' vaga' + (vagas[g] !== 1 ? 's' : '')}</span>
+        </div>
+        <div class="progress mb-3"><div class="progress-bar" style="width:${(membros.length / disc.maxPorGrupo) * 100}%;background:${full ? 'var(--success)' : accent}"></div></div>
+        ${membersList}
+      </div>`;
+  }
+
+  return form + warn + `<div class="grid grid-groups">${groups}</div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// ATIVIDADES TAB
+// ═══════════════════════════════════════════════════
+function renderAtividadesTab(disc, isProf) {
+  const atvs = (disc.atividades || []).sort((a, b) => b.data.localeCompare(a.data));
+  let header = '';
+  if (isProf) {
+    header = `<div class="flex justify-between items-center mb-5"><h2 style="font-size:20px;font-weight:700">Atividades</h2><button class="btn btn-primary" onclick="showAddAtvModal('${disc.id}')">+ Nova</button></div>`;
+  } else {
+    header = `<h2 style="font-size:20px;font-weight:700;margin-bottom:8px">Registrar Pontuação</h2><p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Selecione a atividade e preencha as pontuações</p>`;
+  }
+
+  if (atvs.length === 0) return header + '<div class="card text-center" style="padding:50px"><p style="color:var(--text-muted)">Nenhuma atividade</p></div>';
+
+  let list = '';
+  atvs.forEach(atv => {
+    // Summary badges
+    let badges = '';
+    for (let g = 1; g <= disc.numGrupos; g++) {
+      const p = (atv.pontuacoes && atv.pontuacoes[g]) || 0;
+      badges += `<span class="mono" style="background:${p > 0 ? 'rgba(34,197,94,.13)' : 'var(--input-bg)'};color:${p > 0 ? 'var(--success)' : 'var(--text-muted)'};padding:4px 10px;border-radius:6px;font-size:13px">G${g}: ${p}</span>`;
+    }
+
+    let actions = '';
+    if (isProf) {
+      actions = `<div class="flex gap-2">
+        <button class="btn btn-secondary btn-sm" onclick="toggleEditAtv('${disc.id}','${atv.id}')">✏ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteAtv('${disc.id}','${atv.id}')">🗑</button>
+      </div>`;
+    } else {
+      actions = `<button class="btn btn-secondary btn-sm" onclick="toggleEditAtv('${disc.id}','${atv.id}')">✏ Preencher</button>`;
+    }
+
+    // Edit panel
+    let editPanel = '';
+    if (window._editAtvId === atv.id) {
+      let grupoInputs = '';
+      for (let g = 1; g <= disc.numGrupos; g++) {
+        const val = (atv.pontuacoes && atv.pontuacoes[g]) || '';
+        grupoInputs += `<div><label class="label">Grupo ${g}</label><input type="number" class="input mono" value="${val}" placeholder="0" onchange="setPontGrupo('${disc.id}','${atv.id}',${g},this.value)"></div>`;
+      }
+      let indivInputs = '';
+      (disc.alunos || []).forEach(a => {
+        const val = (atv.individuais && atv.individuais[a.id]) || '';
+        indivInputs += `<div class="flex items-center gap-2"><span style="font-size:13px;color:var(--text-dim);min-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(a.nome)}</span><input type="number" class="input mono" value="${val}" placeholder="0" style="width:80px;flex:0 0 80px" onchange="setPontIndiv('${disc.id}','${atv.id}','${a.id}',this.value)"></div>`;
+      });
+
+      editPanel = `
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:18px">
+          <div class="section-label">Pontuação por Grupo</div>
+          <div class="grid grid-scores mb-5">${grupoInputs}</div>
+          <div class="section-label">Pontuação Individual</div>
+          <div class="grid grid-indiv">${indivInputs}</div>
+        </div>`;
+    }
+
+    list += `
+      <div class="card" style="padding:18px;margin-bottom:12px">
+        <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:8px">
+          <div class="flex items-center gap-3">
+            <span class="badge" style="background:${isProf ? 'rgba(59,130,246,.13);color:var(--accent)' : 'rgba(139,92,246,.13);color:var(--student)'}">${atv.data}</span>
+            <span style="font-weight:600">${escHtml(atv.descricao)}</span>
+          </div>
+          ${actions}
+        </div>
+        ${window._editAtvId !== atv.id ? '<div class="flex flex-wrap gap-2 mt-3">' + badges + '</div>' : ''}
+        ${editPanel}
+      </div>`;
+  });
+
+  return header + list;
+}
+
+// ═══════════════════════════════════════════════════
+// RANKING TAB
+// ═══════════════════════════════════════════════════
+function renderRankingTab(disc) {
+  // Grupo scores
+  const gS = {};
+  for (let g = 1; g <= disc.numGrupos; g++) gS[g] = 0;
+  (disc.atividades || []).forEach(a => {
+    if (a.pontuacoes) Object.entries(a.pontuacoes).forEach(([g, p]) => { gS[g] = (gS[g] || 0) + (parseFloat(p) || 0); });
+  });
+  const gR = Object.entries(gS).map(([g, p]) => ({ grupo: +g, pts: p })).sort((a, b) => b.pts - a.pts);
+  const maxG = Math.max(...gR.map(g => g.pts), 1);
+
+  // Individual
+  const aS = (disc.alunos || []).map(a => {
+    const gr = disc.grupos ? disc.grupos[a.id] : null;
+    let pts = 0;
+    (disc.atividades || []).forEach(at => {
+      if (gr && at.pontuacoes && at.pontuacoes[gr]) pts += parseFloat(at.pontuacoes[gr]) || 0;
+      if (at.individuais && at.individuais[a.id]) pts += parseFloat(at.individuais[a.id]) || 0;
+    });
+    return { ...a, grupo: gr, pts };
+  }).sort((a, b) => b.pts - a.pts);
+  const maxA = Math.max(...aS.map(a => a.pts), 1);
+
+  const mode = window._rankMode || 'grupos';
+
+  let toggle = `
+    <div class="flex justify-between items-center mb-5">
+      <h2 style="font-size:20px;font-weight:700">🏆 Ranking</h2>
+      <div class="flex gap-1" style="background:var(--input-bg);border-radius:8px;padding:3px">
+        <button class="btn btn-sm" style="background:${mode === 'grupos' ? 'var(--accent)' : 'transparent'};color:${mode === 'grupos' ? '#fff' : 'var(--text-muted)'};border-radius:6px" onclick="window._rankMode='grupos';render()">Grupos</button>
+        <button class="btn btn-sm" style="background:${mode === 'indiv' ? 'var(--accent)' : 'transparent'};color:${mode === 'indiv' ? '#fff' : 'var(--text-muted)'};border-radius:6px" onclick="window._rankMode='indiv';render()">Individual</button>
+      </div>
+    </div>`;
+
+  if (mode === 'grupos') {
+    let rows = '';
+    gR.forEach((g, i) => {
+      const membros = (disc.alunos || []).filter(a => disc.grupos && disc.grupos[a.id] === g.grupo);
+      const medalColors = ['#fbbf24', '#94a3b8', '#cd7f32'];
+      const bg = i < 3 ? medalColors[i] : 'var(--border)';
+      const fg = i < 3 ? '#000' : 'var(--text-muted)';
+      let names = membros.map(m => `<span style="background:var(--input-bg);padding:2px 8px;border-radius:4px;font-size:12px;color:var(--text-dim)">${escHtml(m.nome)}</span>`).join('');
+      rows += `
+        <div class="card" style="padding:18px;margin-bottom:10px">
+          <div class="flex items-center gap-4">
+            <div class="mono" style="width:36px;height:36px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:${fg};flex-shrink:0">${i + 1}º</div>
+            <div style="flex:1;min-width:0">
+              <div class="flex justify-between items-center mb-2"><span style="font-weight:700;font-size:16px">Grupo ${g.grupo}</span><span class="mono" style="font-weight:700;font-size:20px;color:var(--accent)">${g.pts}</span></div>
+              <div class="progress" style="height:6px;margin-bottom:8px"><div class="progress-bar" style="height:6px;width:${(g.pts / maxG) * 100}%;background:linear-gradient(90deg,var(--accent),var(--success))"></div></div>
+              <div class="flex flex-wrap gap-2">${names}</div>
+            </div>
+          </div>
+        </div>`;
+    });
+    return toggle + rows;
+  } else {
+    let header = `<div class="rank-row rank-header"><span>#</span><span>Aluno</span><span>Grupo</span><span>Pts</span><span></span></div>`;
+    let rows = '';
+    aS.forEach((a, i) => {
+      const medalColors = ['var(--warn)', 'var(--text-dim)', '#cd7f32'];
+      rows += `
+        <div class="rank-row" style="background:${i % 2 === 0 ? 'var(--card)' : 'transparent'}">
+          <span class="mono" style="font-weight:700;color:${i < 3 ? medalColors[i] : 'var(--text-muted)'}">${i + 1}</span>
+          <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(a.nome)}</span>
+          <span class="badge" style="background:${a.grupo ? 'rgba(59,130,246,.13)' : 'rgba(239,68,68,.13)'};color:${a.grupo ? 'var(--accent)' : 'var(--danger)'}">${a.grupo ? 'G' + a.grupo : '—'}</span>
+          <span class="mono" style="font-weight:700;color:var(--accent)">${a.pts}</span>
+          <div class="progress" style="height:4px"><div class="progress-bar" style="width:${(a.pts / maxA) * 100}%;background:var(--accent)"></div></div>
+        </div>`;
+    });
+    return toggle + header + rows;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CONFIG TAB (PROF ONLY)
+// ═══════════════════════════════════════════════════
+function renderConfigTab(disc) {
+  let alunoRows = '';
+  (disc.alunos || []).sort((a, b) => a.nome.localeCompare(b.nome)).forEach(a => {
+    const gBadge = disc.grupos && disc.grupos[a.id] ? `<span class="badge" style="background:rgba(59,130,246,.13);color:var(--accent)">G${disc.grupos[a.id]}</span>` : '';
+    alunoRows += `<div class="flex justify-between items-center" style="padding:8px 12px;border-radius:8px;background:var(--input-bg);margin-bottom:4px">
+      <span style="font-size:14px">${escHtml(a.nome)}</span>
+      <div class="flex items-center gap-2">${gBadge}<button class="btn btn-ghost" style="padding:2px;color:var(--text-muted)" onclick="removeAluno('${disc.id}','${a.id}')">🗑</button></div>
+    </div>`;
+  });
+
+  return `
+    <div class="card mb-5">
+      <h4 style="font-weight:600;margin-bottom:16px">Dados da Disciplina</h4>
+      <div class="grid" style="grid-template-columns:2fr 1fr 1fr;gap:12px;align-items:end">
+        <div><label class="label">Nome</label><input id="cfg-nome" class="input" value="${escHtml(disc.nome)}"></div>
+        <div><label class="label">Nº Grupos</label><input id="cfg-ngrupos" type="number" class="input" value="${disc.numGrupos}"></div>
+        <div><label class="label">Máx/Grupo</label><input id="cfg-max" type="number" class="input" value="${disc.maxPorGrupo}"></div>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button class="btn btn-primary" onclick="saveConfig('${disc.id}')">✓ Salvar</button>
+        <button class="btn btn-danger" onclick="resetGrupos('${disc.id}')">Resetar Grupos</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="flex justify-between items-center mb-4">
+        <h4 style="font-weight:600">Alunos (${(disc.alunos||[]).length})</h4>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bulk-area').classList.toggle('hidden')">Adicionar vários</button>
+      </div>
+      <div id="bulk-area" class="hidden" style="margin-bottom:16px;padding:16px;background:var(--input-bg);border-radius:10px">
+        <textarea id="bulk-text" placeholder="Nomes, um por linha..." rows="5" style="background:var(--bg);margin-bottom:8px"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="addBulkAlunos('${disc.id}')">+ Adicionar</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="new-aluno" class="input" placeholder="Nome do aluno" onkeydown="if(event.key==='Enter')addAluno('${disc.id}')">
+        <button class="btn btn-primary" onclick="addAluno('${disc.id}')">+</button>
+      </div>
+      <div style="max-height:400px;overflow:auto">${alunoRows}</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════
+
+// ─── DISCIPLINAS ───
+function showAddDiscModal() {
+  const html = `<div class="modal-overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:20px">Nova Disciplina</h3>
+    <div class="flex-col gap-4" style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="label">Nome</label><input id="md-nome" class="input" placeholder="Ex: Cálculo I"></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Nº de Grupos</label><input id="md-ngrupos" type="number" class="input" value="6"></div>
+        <div><label class="label">Máx/Grupo</label><input id="md-max" type="number" class="input" value="5"></div>
+      </div>
+      <div><label class="label">Alunos (um por linha)</label><textarea id="md-alunos" rows="8" placeholder="João da Silva\nMaria Santos"></textarea></div>
+      <div class="flex justify-between" style="margin-top:4px">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="createDisc()">Criar</button>
+      </div>
+    </div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function createDisc() {
+  const nome = document.getElementById('md-nome').value.trim();
+  if (!nome) return;
+  const alunos = document.getElementById('md-alunos').value.split('\n').map(l => l.trim()).filter(Boolean).map(n => ({ id: genId(), nome: n }));
+  const disc = {
+    id: genId(), nome,
+    maxPorGrupo: parseInt(document.getElementById('md-max').value) || 5,
+    numGrupos: parseInt(document.getElementById('md-ngrupos').value) || 6,
+    alunos, grupos: {}, atividades: []
+  };
+  if (!STATE.disciplinas) STATE.disciplinas = [];
+  STATE.disciplinas.push(disc);
+  saveState(); closeModal(); showToast(`"${nome}" criada!`);
+}
+
+function deleteDisc(id) {
+  if (!confirm('Excluir esta disciplina?')) return;
+  STATE.disciplinas = STATE.disciplinas.filter(d => d.id !== id);
+  saveState(); showToast('Excluída', 'danger');
+}
+
+// ─── PIN ───
+function showPinModal() {
+  const html = `<div class="modal-overlay" onclick="closeModal()"><div class="modal" style="max-width:380px" onclick="event.stopPropagation()">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:20px">Alterar PIN</h3>
+    <input id="md-pin" class="input mono" value="${STATE.profPin}" style="text-align:center;font-size:20px;letter-spacing:6px;margin-bottom:14px">
+    <div class="flex justify-between"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="savePin()">Salvar</button></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function savePin() {
+  const pin = document.getElementById('md-pin').value;
+  if (pin.length < 4) { showToast('Mínimo 4 caracteres', 'danger'); return; }
+  STATE.profPin = pin; saveState(); closeModal(); showToast('PIN atualizado!');
+}
+
+// ─── GRUPOS ───
+function atribuirGrupo(discId) {
+  const alunoId = document.getElementById('sel-aluno').value;
+  const grupo = parseInt(document.getElementById('sel-grupo').value);
+  if (!alunoId || !grupo) return;
+  const disc = getDisc(discId);
+  if (!disc.grupos) disc.grupos = {};
+  const vagas = getVagas(disc);
+  if (vagas[grupo] <= 0) { showToast('Grupo cheio!', 'danger'); return; }
+  if (disc.grupos[alunoId]) { showToast('Já está em um grupo!', 'danger'); return; }
+  disc.grupos[alunoId] = grupo;
+  saveState(); showToast(ROLE === 'prof' ? 'Atribuído!' : 'Entrou no grupo! ✓');
+}
+
+function removerDoGrupo(discId, alunoId) {
+  const disc = getDisc(discId);
+  if (disc.grupos) delete disc.grupos[alunoId];
+  saveState(); showToast('Removido', 'warn');
+}
+
+function resetGrupos(discId) {
+  if (!confirm('Resetar todos os grupos?')) return;
+  const disc = getDisc(discId);
+  disc.grupos = {};
+  saveState(); showToast('Grupos resetados', 'warn');
+}
+
+// ─── ATIVIDADES ───
+function showAddAtvModal(discId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const html = `<div class="modal-overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:20px">Nova Atividade</h3>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><label class="label">Data</label><input id="md-atv-data" type="date" class="input" value="${today}"></div>
+      <div><label class="label">Descrição</label><input id="md-atv-desc" class="input" placeholder="Ex: Exercícios cap. 3"></div>
+      <div class="flex justify-between"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="createAtv('${discId}')">Adicionar</button></div>
+    </div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function createAtv(discId) {
+  const data = document.getElementById('md-atv-data').value;
+  const desc = document.getElementById('md-atv-desc').value.trim() || `Atividade ${data}`;
+  const disc = getDisc(discId);
+  if (!disc.atividades) disc.atividades = [];
+  disc.atividades.push({ id: genId(), data, descricao: desc, pontuacoes: {}, individuais: {} });
+  saveState(); closeModal(); showToast('Atividade criada!');
+}
+
+function deleteAtv(discId, atvId) {
+  if (!confirm('Excluir atividade?')) return;
+  const disc = getDisc(discId);
+  disc.atividades = disc.atividades.filter(a => a.id !== atvId);
+  if (window._editAtvId === atvId) window._editAtvId = null;
+  saveState(); showToast('Excluída', 'danger');
+}
+
+window._editAtvId = null;
+function toggleEditAtv(discId, atvId) {
+  window._editAtvId = window._editAtvId === atvId ? null : atvId;
+  render();
+}
+
+function setPontGrupo(discId, atvId, grupo, val) {
+  const disc = getDisc(discId);
+  const atv = disc.atividades.find(a => a.id === atvId);
+  if (!atv.pontuacoes) atv.pontuacoes = {};
+  atv.pontuacoes[grupo] = parseFloat(val) || 0;
+  saveState();
+}
+
+function setPontIndiv(discId, atvId, alunoId, val) {
+  const disc = getDisc(discId);
+  const atv = disc.atividades.find(a => a.id === atvId);
+  if (!atv.individuais) atv.individuais = {};
+  atv.individuais[alunoId] = parseFloat(val) || 0;
+  saveState();
+}
+
+// ─── CONFIG ───
+function saveConfig(discId) {
+  const disc = getDisc(discId);
+  disc.nome = document.getElementById('cfg-nome').value.trim() || disc.nome;
+  disc.numGrupos = parseInt(document.getElementById('cfg-ngrupos').value) || disc.numGrupos;
+  disc.maxPorGrupo = parseInt(document.getElementById('cfg-max').value) || disc.maxPorGrupo;
+  saveState(); showToast('Salvo!');
+}
+
+function addAluno(discId) {
+  const input = document.getElementById('new-aluno');
+  const nome = input.value.trim();
+  if (!nome) return;
+  const disc = getDisc(discId);
+  if (!disc.alunos) disc.alunos = [];
+  disc.alunos.push({ id: genId(), nome });
+  input.value = '';
+  saveState(); showToast('Adicionado!');
+}
+
+function addBulkAlunos(discId) {
+  const text = document.getElementById('bulk-text').value;
+  const novos = text.split('\n').map(l => l.trim()).filter(Boolean).map(n => ({ id: genId(), nome: n }));
+  if (!novos.length) return;
+  const disc = getDisc(discId);
+  if (!disc.alunos) disc.alunos = [];
+  disc.alunos.push(...novos);
+  document.getElementById('bulk-text').value = '';
+  saveState(); showToast(`${novos.length} adicionados!`);
+}
+
+function removeAluno(discId, alunoId) {
+  const disc = getDisc(discId);
+  disc.alunos = disc.alunos.filter(a => a.id !== alunoId);
+  if (disc.grupos) delete disc.grupos[alunoId];
+  saveState(); showToast('Removido', 'warn');
+}
+
+// ─── MODAL UTIL ───
+function closeModal() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) overlay.remove();
+}
+
+window._rankMode = 'grupos';
+</script>
+</body>
+</html>
