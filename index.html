@@ -464,6 +464,16 @@ function gruposTab(d, isP) {
   let go = '<option value="">Grupo...</option>';
   for (let g=1;g<=d.numGrupos;g++) go += `<option value="${g}" ${v[g]<=0?'disabled':''}>Grupo ${g} — ${v[g]} vaga${v[g]!==1?'s':''}</option>`;
 
+  let randomBtn = isP && sg.length > 0 ? `<div class="card mb-4" style="background:var(--accent-soft);border-color:var(--accent-light)">
+    <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--accent);margin-bottom:2px">Sorteio Aleatório</div>
+        <p style="font-size:13px;color:var(--text-secondary)">Distribui os <strong>${sg.length} aluno${sg.length!==1?'s':''} sem grupo</strong> aleatoriamente entre os grupos com vagas</p>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="randomGrupos('${d.id}')">🎲 Sortear Grupos</button>
+    </div>
+  </div>` : '';
+
   let form = `<div class="card mb-6" style="border-color:${isP?'var(--border-light)':'rgba(124,58,237,.12)'}">
     <div style="font-size:15px;font-weight:600;margin-bottom:16px;color:${ac}">${isP?'Atribuir aluno a grupo':'Escolha seu grupo'}</div>
     ${!isP?'<p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Selecione seu nome na lista e o grupo desejado</p>':''}
@@ -501,7 +511,7 @@ function gruposTab(d, isP) {
       <div class="flex flex-col gap-1">${ml}</div>
     </div>`;
   }
-  return form + warn + `<div class="grid grid-groups">${groups}</div>`;
+  return form + randomBtn + warn + `<div class="grid grid-groups">${groups}</div>`;
 }
 
 /* ═══ ATIVIDADES TAB ═══ */
@@ -672,6 +682,42 @@ function atribuir(did){
 }
 function rmGrupo(did,aid){const d=disc(did);if(d.grupos)delete d.grupos[aid];save();toast('Removido','warn');}
 function resetG(did){if(!confirm('Resetar todos os grupos?'))return;disc(did).grupos={};save();toast('Grupos resetados','warn');}
+
+function randomGrupos(did) {
+  if (!confirm('Distribuir aleatoriamente todos os alunos sem grupo? Alunos já em grupos não serão movidos.')) return;
+  const d = disc(did);
+  if (!d.grupos) d.grupos = {};
+  const sg = (d.alunos||[]).filter(a => !d.grupos[a.id]);
+  if (sg.length === 0) { toast('Todos já estão em grupos!', 'warn'); return; }
+  // Shuffle
+  const shuffled = [...sg];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  // Calculate current vagas
+  const v = {};
+  for (let g = 1; g <= d.numGrupos; g++) v[g] = d.maxPorGrupo;
+  Object.values(d.grupos).forEach(g => { if (v[g] !== undefined) v[g]--; });
+  // Distribute
+  let assigned = 0;
+  for (const aluno of shuffled) {
+    // Find group with most vagas (balances distribution)
+    let bestG = null, bestV = 0;
+    for (let g = 1; g <= d.numGrupos; g++) {
+      if (v[g] > bestV) { bestV = v[g]; bestG = g; }
+    }
+    if (bestG && bestV > 0) {
+      d.grupos[aluno.id] = bestG;
+      v[bestG]--;
+      assigned++;
+    }
+  }
+  save();
+  const sobra = sg.length - assigned;
+  if (sobra > 0) toast(`${assigned} distribuídos, ${sobra} sem vaga!`, 'warn');
+  else toast(`${assigned} alunos distribuídos aleatoriamente!`);
+}
 
 function addAtvModal(did){
   const td=new Date().toISOString().slice(0,10);
