@@ -243,7 +243,7 @@ textarea { resize: vertical; line-height: 1.6; }
         </div>
         <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;letter-spacing:-.02em">Professor</h3>
         <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px">Acesso completo ao sistema</p>
-        <input id="pin-input" type="password" class="input mono" placeholder="PIN" style="text-align:center;font-size:18px;letter-spacing:8px;margin-bottom:10px">
+        <input id="pin-input" type="password" class="input mono" placeholder="6 dígitos" maxlength="6" style="text-align:center;font-size:18px;letter-spacing:6px;margin-bottom:10px">
         <p id="pin-error" class="hidden" style="color:var(--danger);font-size:13px;margin-bottom:8px;text-align:center">PIN incorreto</p>
         <button class="btn btn-primary w-full" style="justify-content:center;height:42px" onclick="tryLogin()">Entrar</button>
       </div>
@@ -261,7 +261,7 @@ textarea { resize: vertical; line-height: 1.6; }
     </div>
 
     <p class="text-center" style="color:var(--text-muted);font-size:12px;margin-top:20px">
-      PIN padrão: <code class="mono" style="background:var(--border-light);padding:2px 6px;border-radius:4px;font-size:11px">1234</code>
+      PIN padrão: <code class="mono" style="background:var(--border-light);padding:2px 6px;border-radius:4px;font-size:11px">abc123</code>
     </p>
   </div>
 </div>
@@ -306,7 +306,7 @@ firebase.initializeApp({
 });
 const db = firebase.database(), dataRef = db.ref('painel');
 
-let STATE = { disciplinas: [], profPin: "1234" };
+let STATE = { disciplinas: [], profPin: "abc123" };
 let ROLE = null, VIEW = { page: "home" }, LISTENER = false;
 
 function save() { dataRef.set(STATE); }
@@ -324,6 +324,7 @@ function toast(m, t='success') {
   e.classList.remove('hidden');
   setTimeout(() => e.classList.add('hidden'), 2400);
 }
+function validPin(p) { return /^[a-zA-Z0-9]{6}$/.test(p); }
 function disc(id) { return (STATE.disciplinas||[]).find(d => d.id === id); }
 function vagas(d) {
   const v = {};
@@ -429,7 +430,7 @@ function alunoHome() {
           <span class="badge" style="background:var(--student-light);color:var(--student)">🔒 PIN necessário</span>
         </div>
         <div class="flex gap-2 items-end">
-          <div style="flex:1"><label class="label">Digite o PIN da disciplina</label><input id="dpin-${d.id}" type="password" class="input mono" placeholder="PIN" style="text-align:center;letter-spacing:6px" onkeydown="if(event.key==='Enter')tryDiscPin('${d.id}')"></div>
+          <div style="flex:1"><label class="label">Digite o PIN da disciplina (6 dígitos)</label><input id="dpin-${d.id}" type="password" class="input mono" placeholder="6 dígitos" maxlength="6" style="text-align:center;letter-spacing:6px" onkeydown="if(event.key==='Enter')tryDiscPin('${d.id}')"></div>
           <button class="btn btn-student" onclick="tryDiscPin('${d.id}')" style="height:42px">Entrar</button>
         </div>
         <p id="dpin-err-${d.id}" class="hidden" style="color:var(--danger);font-size:13px;margin-top:8px">PIN incorreto</p>
@@ -553,7 +554,7 @@ function gruposTab(d, isP) {
 function ativTab(d, isP) {
   const as = (d.atividades||[]).sort((a,b) => b.data.localeCompare(a.data));
   let hd = isP
-    ? `<div class="flex justify-between items-center mb-5"><h2 style="font-size:18px;font-weight:700">Atividades</h2><button class="btn btn-primary btn-sm" onclick="addAtvModal('${d.id}')">+ Nova</button></div>`
+    ? `<div class="flex justify-between items-center mb-5"><h2 style="font-size:18px;font-weight:700">Atividades</h2><div class="flex gap-2"><button class="btn btn-secondary btn-sm" onclick="bulkAtvModal('${d.id}')">+ Várias</button><button class="btn btn-primary btn-sm" onclick="addAtvModal('${d.id}')">+ Nova</button></div></div>`
     : '<h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Registrar Pontuação</h2><p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Preencha a pontuação do grupo e/ou individual</p>';
 
   if (as.length===0) return hd + '<div class="card text-center" style="padding:48px"><p style="color:var(--text-muted)">Nenhuma atividade</p></div>';
@@ -653,7 +654,7 @@ function configTab(d) {
         <div><label class="label">Nome</label><input id="c-n" class="input" value="${esc(d.nome)}"></div>
         <div><label class="label">Nº de Grupos</label><input id="c-ng" type="number" class="input" value="${d.numGrupos}"></div>
         <div><label class="label">Máx por Grupo</label><input id="c-m" type="number" class="input" value="${d.maxPorGrupo}"></div>
-        <div><label class="label">PIN do Aluno</label><input id="c-dp" class="input mono" value="${d.discPin||''}" placeholder="Ex: 1010" style="text-align:center;letter-spacing:4px"></div>
+        <div><label class="label">PIN do Aluno</label><input id="c-dp" class="input mono" value="${d.discPin||''}" placeholder="6 dígitos" maxlength="6" style="text-align:center;letter-spacing:4px"></div>
       </div>
       <div class="flex gap-3 mt-4">
         <button class="btn btn-primary btn-sm" onclick="saveCfg('${d.id}')">Salvar</button>
@@ -686,7 +687,7 @@ function addDiscModal() {
       <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
         <div><label class="label">Nº de Grupos</label><input id="m-ng" type="number" class="input" value="6"></div>
         <div><label class="label">Máx por Grupo</label><input id="m-mx" type="number" class="input" value="5"></div>
-        <div><label class="label">PIN da Disciplina</label><input id="m-dp" class="input mono" placeholder="Ex: 1010" style="text-align:center;letter-spacing:4px"></div>
+        <div><label class="label">PIN da Disciplina</label><input id="m-dp" class="input mono" placeholder="6 dígitos" maxlength="6" style="text-align:center;letter-spacing:4px"></div>
       </div>
       <div><label class="label">Alunos (um por linha)</label><textarea id="m-al" rows="8" placeholder="João da Silva&#10;Maria Santos"></textarea></div>
       <div class="flex justify-between mt-2"><button class="btn btn-secondary" onclick="closeM()">Cancelar</button><button class="btn btn-primary" onclick="mkDisc()">Criar Disciplina</button></div>
@@ -696,7 +697,8 @@ function addDiscModal() {
 function mkDisc() {
   const n=document.getElementById('m-n').value.trim(); if(!n)return;
   const al=document.getElementById('m-al').value.split('\n').map(l=>l.trim()).filter(Boolean).map(x=>({id:gid(),nome:x}));
-  const dp=document.getElementById('m-dp').value.trim()||'';
+  const dp=document.getElementById('m-dp').value.trim();
+  if(dp && !validPin(dp)){toast('PIN da disciplina deve ter 6 caracteres alfanuméricos','danger');return;}
   if(!STATE.disciplinas)STATE.disciplinas=[];
   STATE.disciplinas.push({id:gid(),nome:n,maxPorGrupo:parseInt(document.getElementById('m-mx').value)||5,numGrupos:parseInt(document.getElementById('m-ng').value)||6,alunos:al,grupos:{},atividades:[],discPin:dp});
   save();closeM();toast('"'+n+'" criada!');
@@ -704,12 +706,15 @@ function mkDisc() {
 function delDisc(id){if(!confirm('Excluir esta disciplina e todos os dados?'))return;STATE.disciplinas=STATE.disciplinas.filter(d=>d.id!==id);save();toast('Excluída','danger');}
 
 function pinModal(){
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal-overlay" onclick="closeM()"><div class="modal" style="max-width:380px" onclick="event.stopPropagation()">
-    <h3>Alterar PIN</h3><input id="m-p" class="input mono" value="${STATE.profPin}" style="text-align:center;font-size:20px;letter-spacing:6px;margin-bottom:16px">
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-overlay" onclick="closeM()"><div class="modal" style="max-width:400px" onclick="event.stopPropagation()">
+    <h3>Alterar PIN do Professor</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Exatamente 6 caracteres alfanuméricos (letras e números)</p>
+    <input id="m-p" class="input mono" value="${STATE.profPin}" maxlength="6" style="text-align:center;font-size:20px;letter-spacing:6px;margin-bottom:6px">
+    <p id="pin-val-err" class="hidden" style="color:var(--danger);font-size:13px;margin-bottom:12px;text-align:center"></p>
     <div class="flex justify-between"><button class="btn btn-secondary" onclick="closeM()">Cancelar</button><button class="btn btn-primary" onclick="saveP()">Salvar</button></div>
   </div></div>`);
 }
-function saveP(){const p=document.getElementById('m-p').value;if(p.length<4){toast('Mínimo 4 caracteres','danger');return;}STATE.profPin=p;save();closeM();toast('PIN atualizado!');}
+function saveP(){const p=document.getElementById('m-p').value,err=document.getElementById('pin-val-err');if(!validPin(p)){err.textContent='PIN deve ter exatamente 6 caracteres alfanuméricos';err.classList.remove('hidden');return;}STATE.profPin=p;save();closeM();toast('PIN atualizado!');}
 
 function atribuir(did){
   const ai=document.getElementById('sel-a').value,gi=parseInt(document.getElementById('sel-g').value);
@@ -769,6 +774,37 @@ function addAtvModal(did){
   </div></div>`);
 }
 function mkAtv(did){const dt=document.getElementById('m-ad').value,ds=document.getElementById('m-adesc').value.trim()||'Atividade '+dt;const d=disc(did);if(!d.atividades)d.atividades=[];d.atividades.push({id:gid(),data:dt,descricao:ds,pontuacoes:{},individuais:{}});save();closeM();toast('Atividade criada!');}
+
+function bulkAtvModal(did){
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-overlay" onclick="closeM()"><div class="modal" style="max-width:540px" onclick="event.stopPropagation()">
+    <h3>Adicionar Várias Atividades</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Uma atividade por linha no formato: <code class="mono" style="background:var(--input-bg);padding:2px 6px;border-radius:4px;font-size:12px">AAAA-MM-DD ; Descrição</code><br>Se omitir a data, usa a de hoje. Se omitir a descrição, gera automaticamente.</p>
+    <textarea id="m-batv" rows="10" placeholder="2026-03-14 ; Exercícios cap. 1\n2026-03-18 ; Lista de revisão\n2026-03-21 ; Trabalho em grupo\n\nOu só as descrições:\nExercícios cap. 1\nLista de revisão" style="margin-bottom:14px"></textarea>
+    <div class="flex justify-between"><button class="btn btn-secondary" onclick="closeM()">Cancelar</button><button class="btn btn-primary" onclick="mkBulkAtv('${did}')">Adicionar</button></div>
+  </div></div>`);
+}
+function mkBulkAtv(did){
+  const text=document.getElementById('m-batv').value;
+  const lines=text.split('\\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length)return;
+  const d=disc(did);if(!d.atividades)d.atividades=[];
+  const today=new Date().toISOString().slice(0,10);
+  let count=0;
+  lines.forEach(line=>{
+    let data=today,desc='';
+    if(line.includes(';')){
+      const parts=line.split(';').map(p=>p.trim());
+      if(/^\\d{4}-\\d{2}-\\d{2}$/.test(parts[0])){data=parts[0];desc=parts[1]||'';}
+      else{desc=parts.join(' ; ');}
+    } else if(/^\\d{4}-\\d{2}-\\d{2}/.test(line)){
+      const parts=line.split(/\\s+/);data=parts[0];desc=parts.slice(1).join(' ');
+    } else {desc=line;}
+    if(!desc)desc='Atividade '+data;
+    d.atividades.push({id:gid(),data:data,descricao:desc,pontuacoes:{},individuais:{}});
+    count++;
+  });
+  save();closeM();toast(count+' atividade'+(count!==1?'s':'')+' adicionada'+(count!==1?'s':'')+'!');
+}
 function delAtv(did,aid){if(!confirm('Excluir atividade?'))return;const d=disc(did);d.atividades=d.atividades.filter(a=>a.id!==aid);if(window._eid===aid)window._eid=null;save();toast('Excluída','danger');}
 
 window._eid=null;
@@ -776,7 +812,7 @@ function toggleEdit(did,aid){window._eid=window._eid===aid?null:aid;render();}
 function spg(did,aid,g,v){const d=disc(did),a=d.atividades.find(x=>x.id===aid);if(!a.pontuacoes)a.pontuacoes={};a.pontuacoes[g]=parseFloat(v)||0;save();}
 function spi(did,aid,uid,v){const d=disc(did),a=d.atividades.find(x=>x.id===aid);if(!a.individuais)a.individuais={};a.individuais[uid]=parseFloat(v)||0;save();}
 
-function saveCfg(did){const d=disc(did);d.nome=document.getElementById('c-n').value.trim()||d.nome;d.numGrupos=parseInt(document.getElementById('c-ng').value)||d.numGrupos;d.maxPorGrupo=parseInt(document.getElementById('c-m').value)||d.maxPorGrupo;d.discPin=document.getElementById('c-dp').value.trim();save();toast('Salvo!');}
+function saveCfg(did){const d=disc(did);const dp=document.getElementById('c-dp').value.trim();if(dp&&!validPin(dp)){toast('PIN deve ter 6 caracteres alfanuméricos','danger');return;}d.nome=document.getElementById('c-n').value.trim()||d.nome;d.numGrupos=parseInt(document.getElementById('c-ng').value)||d.numGrupos;d.maxPorGrupo=parseInt(document.getElementById('c-m').value)||d.maxPorGrupo;d.discPin=dp;save();toast('Salvo!');}
 function addA(did){const i=document.getElementById('na'),n=i.value.trim();if(!n)return;const d=disc(did);if(!d.alunos)d.alunos=[];d.alunos.push({id:gid(),nome:n});i.value='';save();toast('Adicionado!');}
 function bulkAdd(did){const t=document.getElementById('bk-t').value,ns=t.split('\n').map(l=>l.trim()).filter(Boolean).map(n=>({id:gid(),nome:n}));if(!ns.length)return;const d=disc(did);if(!d.alunos)d.alunos=[];d.alunos.push(...ns);document.getElementById('bk-t').value='';save();toast(ns.length+' adicionados!');}
 function rmAluno(did,aid){const d=disc(did);d.alunos=d.alunos.filter(a=>a.id!==aid);if(d.grupos)delete d.grupos[aid];save();toast('Removido','warn');}
