@@ -325,6 +325,21 @@ function toast(m, t='success') {
   setTimeout(() => e.classList.add('hidden'), 2400);
 }
 function validPin(p) { return /^[a-zA-Z0-9]{6}$/.test(p); }
+function fmtData(iso) {
+  if (!iso) return '';
+  const p = iso.split('-');
+  if (p.length === 3) return p[2] + '/' + p[1] + '/' + p[0];
+  return iso;
+}
+function parseData(str) {
+  str = str.trim();
+  // DD/MM/AAAA
+  const br = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) return br[3] + '-' + br[2] + '-' + br[1];
+  // AAAA-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return null;
+}
 function disc(id) { return (STATE.disciplinas||[]).find(d => d.id === id); }
 function vagas(d) {
   const v = {};
@@ -580,7 +595,7 @@ function ativTab(d, isP) {
     return `<div class="card" style="padding:20px;margin-bottom:12px">
       <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:8px">
         <div class="flex items-center gap-3">
-          <span class="badge mono" style="background:${isP?'var(--accent-light);color:var(--accent)':'var(--student-light);color:var(--student)'}">${at.data}</span>
+          <span class="badge mono" style="background:${isP?'var(--accent-light);color:var(--accent)':'var(--student-light);color:var(--student)'}">${fmtData(at.data)}</span>
           <span style="font-weight:600;font-size:14px">${esc(at.descricao)}</span>
         </div>${acts}
       </div>
@@ -773,37 +788,45 @@ function addAtvModal(did){
     </div>
   </div></div>`);
 }
-function mkAtv(did){const dt=document.getElementById('m-ad').value,ds=document.getElementById('m-adesc').value.trim()||'Atividade '+dt;const d=disc(did);if(!d.atividades)d.atividades=[];d.atividades.push({id:gid(),data:dt,descricao:ds,pontuacoes:{},individuais:{}});save();closeM();toast('Atividade criada!');}
+function mkAtv(did){const dt=document.getElementById('m-ad').value,ds=document.getElementById('m-adesc').value.trim()||'Atividade '+fmtData(dt);const d=disc(did);if(!d.atividades)d.atividades=[];d.atividades.push({id:gid(),data:dt,descricao:ds,pontuacoes:{},individuais:{}});save();closeM();toast('Atividade criada!');}
 
 function bulkAtvModal(did){
   document.body.insertAdjacentHTML('beforeend',`<div class="modal-overlay" onclick="closeM()"><div class="modal" style="max-width:540px" onclick="event.stopPropagation()">
     <h3>Adicionar Várias Atividades</h3>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Uma atividade por linha no formato: <code class="mono" style="background:var(--input-bg);padding:2px 6px;border-radius:4px;font-size:12px">AAAA-MM-DD ; Descrição</code><br>Se omitir a data, usa a de hoje. Se omitir a descrição, gera automaticamente.</p>
-    <textarea id="m-batv" rows="10" placeholder="2026-03-14 ; Exercícios cap. 1\n2026-03-18 ; Lista de revisão\n2026-03-21 ; Trabalho em grupo\n\nOu só as descrições:\nExercícios cap. 1\nLista de revisão" style="margin-bottom:14px"></textarea>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Uma atividade por linha. Formatos aceitos:</p>
+    <div style="background:var(--input-bg);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-secondary);line-height:1.8">
+      <code class="mono" style="color:var(--accent)">17/03/2026 ; Exercícios cap. 1</code><br>
+      <code class="mono" style="color:var(--accent)">2026-03-17 ; Lista de revisão</code><br>
+      <code class="mono" style="color:var(--text-muted)">Trabalho em grupo</code> <span style="font-size:12px">(usa data de hoje)</span>
+    </div>
+    <textarea id="m-batv" rows="8" placeholder="17/03/2026 ; Exercícios cap. 1&#10;21/03/2026 ; Lista de revisão&#10;Trabalho em grupo" style="margin-bottom:14px"></textarea>
     <div class="flex justify-between"><button class="btn btn-secondary" onclick="closeM()">Cancelar</button><button class="btn btn-primary" onclick="mkBulkAtv('${did}')">Adicionar</button></div>
   </div></div>`);
 }
 function mkBulkAtv(did){
-  const text=document.getElementById('m-batv').value;
-  const lines=text.split('\\n').map(l=>l.trim()).filter(Boolean);
-  if(!lines.length)return;
-  const d=disc(did);if(!d.atividades)d.atividades=[];
-  const today=new Date().toISOString().slice(0,10);
-  let count=0;
-  lines.forEach(line=>{
-    let data=today,desc='';
-    if(line.includes(';')){
-      const parts=line.split(';').map(p=>p.trim());
-      if(/^\\d{4}-\\d{2}-\\d{2}$/.test(parts[0])){data=parts[0];desc=parts[1]||'';}
-      else{desc=parts.join(' ; ');}
-    } else if(/^\\d{4}-\\d{2}-\\d{2}/.test(line)){
-      const parts=line.split(/\\s+/);data=parts[0];desc=parts.slice(1).join(' ');
-    } else {desc=line;}
-    if(!desc)desc='Atividade '+data;
-    d.atividades.push({id:gid(),data:data,descricao:desc,pontuacoes:{},individuais:{}});
+  const text = document.getElementById('m-batv').value;
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return;
+  const d = disc(did); if (!d.atividades) d.atividades = [];
+  const today = new Date().toISOString().slice(0, 10);
+  let count = 0;
+  lines.forEach(line => {
+    let data = today, desc = '';
+    if (line.includes(';')) {
+      const parts = line.split(';').map(p => p.trim());
+      const parsed = parseData(parts[0]);
+      if (parsed) { data = parsed; desc = parts.slice(1).join('; '); }
+      else { desc = line; }
+    } else {
+      const parsed = parseData(line.split(/\s+/)[0]);
+      if (parsed) { data = parsed; desc = line.replace(line.split(/\s+/)[0], '').trim(); }
+      else { desc = line; }
+    }
+    if (!desc) desc = 'Atividade ' + fmtData(data);
+    d.atividades.push({ id: gid(), data: data, descricao: desc, pontuacoes: {}, individuais: {} });
     count++;
   });
-  save();closeM();toast(count+' atividade'+(count!==1?'s':'')+' adicionada'+(count!==1?'s':'')+'!');
+  save(); closeM(); toast(count + ' atividade' + (count !== 1 ? 's' : '') + ' adicionada' + (count !== 1 ? 's' : '') + '!');
 }
 function delAtv(did,aid){if(!confirm('Excluir atividade?'))return;const d=disc(did);d.atividades=d.atividades.filter(a=>a.id!==aid);if(window._eid===aid)window._eid=null;save();toast('Excluída','danger');}
 
